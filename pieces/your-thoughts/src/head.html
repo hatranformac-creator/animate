@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Your thoughts</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #1d1a17; overflow: hidden; }
+  body { display: flex; align-items: center; justify-content: center; }
+  canvas { height: min(100vh, calc(100vw * 16 / 9)); width: auto; aspect-ratio: 9 / 16; display: block; cursor: pointer; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script>
+"use strict";
+// =====================================================================
+//  YOUR THOUGHTS — 9:16, 31.0s @ 120 BPM, 24fps, sketchbook. One page, one doodle hero.
+//  A graphite tangle of thoughts grows over the hero ("I'm bad at this"); an eraser rubs it out; the one loop left is
+//  inked and ripples into rings ("I'm learning"). The rings morph into one beginner's circle; the hero redraws it a
+//  little turned, day after day, faster and faster; after a silence the last circle closes and every graphite circle
+//  inks at once into a flower. The end is the opening frame, changed: a flower where the tangle was.
+//  Device: mess is graphite, what's settled is ink; every kind word inks one more circle.
+// =====================================================================
+const FPS = 24, W = 1080, H = 1920;
+const BPM = 120, BEAT = 60 / BPM, E8 = BEAT / 2, E16 = BEAT / 4;
+const DURATION = 31.0;
+const NFRAMES = Math.round(DURATION * FPS);
+const LOOP_T = NFRAMES / FPS;
+const SAFE = { top: 240, bottom: 420, right: 140 };
+const HAND = '"Ink Free", "Segoe Print", "Bradley Hand", "Patrick Hand", "Comic Sans MS", "Chalkboard SE", cursive';
+const CX = 500;
+
+const ERA_LIST = [[0, 13.0, () => sceneThoughts()], [13.0, 31.0, () => scenePractice()]];
+const SHOTS = [
+  ['tangle', 0, 0.0, 6.0, 'a graphite tangle of thoughts grows over the hero: "I\'m bad at this"'],
+  ['erase', 0, 6.0, 8.0, 'an eraser rubs the tangle out; one loop survives'],
+  ['rings', 0, 8.0, 13.0, 'the loop is inked and ripples into rings: "I\'m learning"'],
+  ['beginner', 1, 13.0, 21.0, 'one beginner\'s circle, redrawn a little turned, day after day, faster'],
+  ['last', 1, 21.0, 23.0, 'silence: the last circle, slowly'],
+  ['master', 1, 23.0, 25.0, 'every circle inks at once: a flower'],
+  ['return', 1, 25.0, 31.0, 'the opening frame, changed: a flower where the tangle was'],
+];
+// the circles of the flower: when each is drawn (the journey speeds up beat -> 8th) and the day it stands for
+const PETAL_T = [13.0, 14.5, 15.5, 16.5, 17.0, 17.5, 18.0, 18.5, 18.75, 19.0, 19.25, 19.5, 19.75, 20.0, 20.25, 20.5, 20.75, 21.25];
+const PETAL_D = [0.01, 0.75, 0.75, 0.45, 0.45, 0.45, 0.45, 0.24, 0.24, 0.24, 0.24, 0.24, 0.24, 0.24, 0.24, 0.24, 0.24, 1.75];
+const PETAL_DAY = [1, 2, 3, 5, 8, 13, 21, 30, 45, 60, 90, 120, 160, 200, 250, 300, 340, 365];
+const TIMELINE = {
+  width: W, height: H, fps: FPS, bpm: BPM, duration: DURATION, frames: NFRAMES, loop: LOOP_T, safe: SAFE,
+  format: 'morph-chain',
+  shots: SHOTS.map(([key, era, t0, t1, title], i) => ({ id: i + 1, key, era, t0, t1, title })),
+  cuts: [],
+  morphs: [13.0],
+  cues: {
+    seed: 0.5, tangle: 1.5, bubble1: 2.5, cap1: 1.75, press: 5.5,
+    eraser: 6.0, erase: 6.25, eraseEnd: 7.5, inkSeed: 7.5, rings: 8.25, bubble2: 9.0, cap2: 9.25,
+    cap3: 14.25, last: 21.25, payoff: 23.0, cap4: 23.25, pull: 24.5, cap5: 25.5, cap6: 28.0, sign: 29.5,
+  },
+  acts: [
+    { name: '1 Tangle', role: 'build', t0: 0.0, t1: 5.5 },
+    { name: '2 Press', role: 'peak', t0: 5.5, t1: 6.25 },
+    { name: '3 Heal', t0: 6.25, t1: 13.6 },
+    { name: '4 Practice', role: 'journey', t0: 13.6, t1: 21.0 },
+    { name: '5 Last', role: 'silence', t0: 21.0, t1: 23.0 },
+    { name: '6 Master', role: 'gift', t0: 23.0, t1: 25.0 },
+    { name: '7 Return', role: 'goodbye', t0: 25.0, t1: 31.0 },
+  ],
+  board: [
+    { t: 1.0, title: '1 a pencil loop over the hero', sound: 'near silence, pencil scratch', next: 'the loop keeps going' },
+    { t: 5.0, title: '2 the tangle: "I\'m bad at this"', sound: 'scratchy, uneasy plucks building', next: 'the tangle presses down' },
+    { t: 6.9, title: '3 the eraser rubs it out', sound: 'a dip, then one chime', next: 'the last loop is inked' },
+    { t: 11.0, title: '4 rings: "I\'m learning"', sound: 'a warm pad comes in', next: 'close in on the rings' },
+    { t: 13.0, title: '5 rings -> one circle (morph)', sound: 'a rising fifth', next: 'the hero redraws it' },
+    { t: 19.0, title: '6 day after day, faster', sound: 'a groove on 8ths', next: 'one gap left' },
+    { t: 22.2, title: '7 the last circle, in silence', sound: 'near silence', next: 'it closes' },
+    { t: 24.2, title: '8 every circle inks: master', sound: 'the loudest hit', next: 'pull back' },
+    { t: 26.8, title: '9 the opening frame, changed', sound: 'warm, full', next: 'the closing line' },
+    { t: 30.2, title: '10 you are choosing', sound: 'fade', next: 'loops' },
+  ],
+  narration: [],
+};
+window.TIMELINE = TIMELINE;

@@ -1,0 +1,9 @@
+{
+  "name": "your-thoughts",
+  "title": "Your thoughts",
+  "format": { "width": 1080, "height": 1920, "fps": 24, "bpm": 120, "duration": 31.0, "frames": 744 },
+  "storyFormat": "morph chain on one page (2 eras, 1 shape morph)",
+  "style": "sketchbook",
+  "scenes": ["src/scenes.js", "src/practice.js"],
+  "review": { "safe": { "top": 240, "bottom": 420, "right": 140 }, "refs": {} }
+}
